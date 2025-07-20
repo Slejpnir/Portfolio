@@ -1,0 +1,16 @@
+# dependencies
+node_modules/
+
+# production
+/dist
+
+# misc
+.DS_Store
+.env.local
+.env.*.local
+*.log
+
+# lockfiles (optional, but usually keep one for reproducible builds)
+# Uncomment the next line if you want to ignore lockfiles (not recommended for teams)
+# package-lock.json
+# yarn.lock 
