@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 
-const tattoos = [
+const healedTattoos = [
   { src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb', title: 'Dragon Sleeve' },
   { src: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2', title: 'Rose Handpiece' },
+];
+
+const flashDesigns = [
   { src: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca', title: 'Skull and Dagger' },
+  { src: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429', title: 'Phoenix Flash' },
 ];
 
 function Header({ currentSection, setSection }) {
@@ -59,15 +63,22 @@ function Button({ children, variant = 'solid', size = 'md', className = '', ...p
   return <button className={classes} {...props}>{children}</button>;
 }
 
-function GalleryGrid() {
+function GalleryGrid({ tattoos, onBook }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
       {tattoos.map((t) => (
-        <div key={t.src} className="relative overflow-hidden rounded-2xl shadow-lg">
+        <div key={t.src} className="relative overflow-hidden rounded-2xl shadow-lg flex flex-col">
           <img src={t.src} alt={t.title} className="object-cover w-full h-64" />
           <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 to-transparent p-4 flex items-end">
             <h3 className="text-lg font-semibold text-white">{t.title}</h3>
           </div>
+          {onBook && (
+            <div className="relative z-10 p-4 bg-zinc-950/80 flex justify-center">
+              <Button size="sm" variant="outline" onClick={() => onBook(t.title)}>
+                Book this design
+              </Button>
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -89,11 +100,30 @@ function HomeSection({ setSection }) {
   );
 }
 
-function GallerySection() {
+function GallerySection({ onBookFlash }) {
+  const [tab, setTab] = useState('healed');
   return (
     <section>
       <h2 className="text-4xl font-bold mb-6">Gallery</h2>
-      <GalleryGrid />
+      <div className="flex gap-4 mb-6">
+        <Button
+          variant={tab === 'healed' ? 'solid' : 'outline'}
+          onClick={() => setTab('healed')}
+        >
+          Healed Tattoos
+        </Button>
+        <Button
+          variant={tab === 'flash' ? 'solid' : 'outline'}
+          onClick={() => setTab('flash')}
+        >
+          Flash Designs
+        </Button>
+      </div>
+      {tab === 'healed' ? (
+        <GalleryGrid tattoos={healedTattoos} />
+      ) : (
+        <GalleryGrid tattoos={flashDesigns} onBook={onBookFlash} />
+      )}
     </section>
   );
 }
@@ -110,8 +140,9 @@ function AboutSection() {
   );
 }
 
-function BookingSection() {
+function BookingSection({ prefillDescription }) {
   const [submitted, setSubmitted] = useState(false);
+  const [description, setDescription] = useState(prefillDescription || '');
   const handleSubmit = (e) => {
     e.preventDefault();
     setSubmitted(true);
@@ -125,7 +156,14 @@ function BookingSection() {
     <form onSubmit={handleSubmit} className="grid gap-4 max-w-lg mx-auto">
       <input required className="p-3 rounded bg-zinc-800" placeholder="Name" />
       <input required type="email" className="p-3 rounded bg-zinc-800" placeholder="Email" />
-      <textarea required className="p-3 rounded bg-zinc-800" rows={5} placeholder="Describe your idea" />
+      <textarea
+        required
+        className="p-3 rounded bg-zinc-800"
+        rows={5}
+        placeholder="Describe your idea"
+        value={description}
+        onChange={e => setDescription(e.target.value)}
+      />
       <Button type="submit">Send Request</Button>
     </form>
   );
@@ -133,14 +171,21 @@ function BookingSection() {
 
 export default function TattooPortfolio() {
   const [section, setSection] = useState('home');
+  const [prefillDescription, setPrefillDescription] = useState('');
+
+  const handleBookFlash = (title) => {
+    setPrefillDescription(`I want to book the flash design: ${title}`);
+    setSection('booking');
+  };
+
   return (
     <div className="bg-zinc-950 text-zinc-100 font-sans min-h-screen flex flex-col">
       <Header currentSection={section} setSection={setSection} />
       <main className="container mx-auto px-4 py-8 flex-1">
         {section === 'home' && <HomeSection setSection={setSection} />}
-        {section === 'gallery' && <GallerySection />}
+        {section === 'gallery' && <GallerySection onBookFlash={handleBookFlash} />}
         {section === 'about' && <AboutSection />}
-        {section === 'booking' && <BookingSection />}
+        {section === 'booking' && <BookingSection prefillDescription={prefillDescription} />}
       </main>
       <Footer />
     </div>
