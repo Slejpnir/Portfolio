@@ -24,16 +24,30 @@ export default async function handler(req, res) {
       ${designType === 'flash' ? `<p><strong>Selected Flash Design:</strong> ${selectedFlash}</p>` : ''}
       <p><strong>Size:</strong> ${size}</p>
       <p><strong>Description:</strong> ${description}</p>
-      ${uploadedFile ? `<p><strong>File Uploaded:</strong> ${uploadedFile.name}</p>` : ''}
+      ${uploadedFile ? `<p><strong>Reference Image:</strong> Attached as file: ${uploadedFile.name}</p>` : ''}
     `;
 
-    // Send email
-    const { data, error } = await resend.emails.send({
-      from: 'Tattoo Portfolio <onboarding@resend.dev>', // You'll need to verify your domain
-      to: [process.env.ADMIN_EMAIL], // Your email address
+    // Prepare email options
+    const emailOptions = {
+      from: 'Tattoo Portfolio <onboarding@resend.dev>',
+      to: [process.env.ADMIN_EMAIL],
       subject: `New Tattoo Booking: ${name}`,
       html: emailContent,
-    });
+    };
+
+    // Add attachment if file is uploaded
+    if (uploadedFile && uploadedFile.data) {
+      emailOptions.attachments = [
+        {
+          filename: uploadedFile.name,
+          content: uploadedFile.data,
+          contentType: uploadedFile.type
+        }
+      ];
+    }
+
+    // Send email
+    const { data, error } = await resend.emails.send(emailOptions);
 
     if (error) {
       console.error('Resend error:', error);

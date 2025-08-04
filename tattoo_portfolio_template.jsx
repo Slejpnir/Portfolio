@@ -160,6 +160,18 @@ function BookingSection({ prefillDescription }) {
     setError('');
 
     try {
+      // Convert file to buffer if uploaded
+      let fileData = null;
+      if (uploadedFile) {
+        const arrayBuffer = await uploadedFile.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        fileData = {
+          name: uploadedFile.name,
+          data: buffer,
+          type: uploadedFile.type
+        };
+      }
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
@@ -172,7 +184,7 @@ function BookingSection({ prefillDescription }) {
           selectedFlash,
           size,
           description,
-          uploadedFile: uploadedFile ? { name: uploadedFile.name } : null
+          uploadedFile: fileData
         }),
       });
 
