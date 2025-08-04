@@ -245,13 +245,12 @@ function BookingSection({ prefillDescription }) {
         placeholder="Name" 
       />
       <input 
-        required 
         type="email" 
         name="email"
         value={formData.email}
         onChange={handleInputChange}
         className="p-3 rounded bg-zinc-800" 
-        placeholder="Email" 
+        placeholder="Email (optional)" 
       />
       <input 
         type="tel" 
