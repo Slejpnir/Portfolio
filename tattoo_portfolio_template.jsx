@@ -151,13 +151,21 @@ function BookingSection({ prefillDescription }) {
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
-    email: ''
+    email: '',
+    phone: ''
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    // Validate that at least email or phone is provided
+    if (!formData.email && !formData.phone) {
+      setError('Please provide either an email or phone number');
+      setLoading(false);
+      return;
+    }
 
     try {
       // Convert file to base64 if uploaded
@@ -186,6 +194,7 @@ function BookingSection({ prefillDescription }) {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
+          phone: formData.phone,
           designType,
           selectedFlash,
           size,
@@ -243,6 +252,14 @@ function BookingSection({ prefillDescription }) {
         onChange={handleInputChange}
         className="p-3 rounded bg-zinc-800" 
         placeholder="Email" 
+      />
+      <input 
+        type="tel" 
+        name="phone"
+        value={formData.phone}
+        onChange={handleInputChange}
+        className="p-3 rounded bg-zinc-800" 
+        placeholder="Phone Number (optional)" 
       />
       
       <div className="space-y-3">

@@ -8,18 +8,24 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { name, email, designType, selectedFlash, size, description, uploadedFile } = req.body;
+    const { name, email, phone, designType, selectedFlash, size, description, uploadedFile } = req.body;
 
     // Validate required fields
-    if (!name || !email || !size || !description) {
+    if (!name || !size || !description) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Validate that at least one contact method is provided
+    if (!email && !phone) {
+      return res.status(400).json({ message: 'Please provide either an email or phone number' });
     }
 
     // Create email content
     const emailContent = `
       <h2>New Tattoo Booking Request</h2>
       <p><strong>Name:</strong> ${name}</p>
-      <p><strong>Email:</strong> ${email}</p>
+      ${email ? `<p><strong>Email:</strong> ${email}</p>` : ''}
+      ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ''}
       <p><strong>Design Type:</strong> ${designType}</p>
       ${designType === 'flash' ? `<p><strong>Selected Flash Design:</strong> ${selectedFlash}</p>` : ''}
       <p><strong>Size:</strong> ${size}</p>
