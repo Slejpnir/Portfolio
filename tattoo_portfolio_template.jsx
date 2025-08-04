@@ -160,16 +160,22 @@ function BookingSection({ prefillDescription }) {
     setError('');
 
     try {
-      // Convert file to buffer if uploaded
+      // Convert file to base64 if uploaded
       let fileData = null;
       if (uploadedFile) {
-        const arrayBuffer = await uploadedFile.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        fileData = {
-          name: uploadedFile.name,
-          data: buffer,
-          type: uploadedFile.type
-        };
+        const reader = new FileReader();
+        fileData = await new Promise((resolve) => {
+          reader.onload = () => {
+            // Convert base64 to buffer on the server side
+            const base64Data = reader.result;
+            resolve({
+              name: uploadedFile.name,
+              data: base64Data,
+              type: uploadedFile.type
+            });
+          };
+          reader.readAsDataURL(uploadedFile);
+        });
       }
 
       const response = await fetch('/api/contact', {

@@ -37,10 +37,14 @@ export default async function handler(req, res) {
 
     // Add attachment if file is uploaded
     if (uploadedFile && uploadedFile.data) {
+      // Convert base64 to buffer for attachment
+      const base64Data = uploadedFile.data.replace(/^data:image\/[a-z]+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      
       emailOptions.attachments = [
         {
           filename: uploadedFile.name,
-          content: uploadedFile.data,
+          content: buffer,
           contentType: uploadedFile.type
         }
       ];
