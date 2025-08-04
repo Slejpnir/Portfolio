@@ -143,10 +143,65 @@ function AboutSection() {
 function BookingSection({ prefillDescription }) {
   const [submitted, setSubmitted] = useState(false);
   const [description, setDescription] = useState(prefillDescription || '');
-  const handleSubmit = (e) => {
+  const [designType, setDesignType] = useState('own');
+  const [selectedFlash, setSelectedFlash] = useState('');
+  const [size, setSize] = useState('');
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: ''
+  });
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          designType,
+          selectedFlash,
+          size,
+          description,
+          uploadedFile: uploadedFile ? { name: uploadedFile.name } : null
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send request');
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    setUploadedFile(file);
+  };
+
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
   return submitted ? (
     <div className="text-center">
       <h2 className="text-3xl font-semibold mb-4">Thank you!</h2>
@@ -154,17 +209,119 @@ function BookingSection({ prefillDescription }) {
     </div>
   ) : (
     <form onSubmit={handleSubmit} className="grid gap-4 max-w-lg mx-auto">
-      <input required className="p-3 rounded bg-zinc-800" placeholder="Name" />
-      <input required type="email" className="p-3 rounded bg-zinc-800" placeholder="Email" />
+      <input 
+        required 
+        name="name"
+        value={formData.name}
+        onChange={handleInputChange}
+        className="p-3 rounded bg-zinc-800" 
+        placeholder="Name" 
+      />
+      <input 
+        required 
+        type="email" 
+        name="email"
+        value={formData.email}
+        onChange={handleInputChange}
+        className="p-3 rounded bg-zinc-800" 
+        placeholder="Email" 
+      />
+      
+      <div className="space-y-3">
+        <label className="block text-sm font-medium">Design Type</label>
+        <div className="flex gap-4">
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="designType"
+              value="own"
+              checked={designType === 'own'}
+              onChange={(e) => setDesignType(e.target.value)}
+              className="mr-2"
+            />
+            Own Design
+          </label>
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="designType"
+              value="flash"
+              checked={designType === 'flash'}
+              onChange={(e) => setDesignType(e.target.value)}
+              className="mr-2"
+            />
+            Flash Design
+          </label>
+        </div>
+      </div>
+
+      {designType === 'own' && (
+        <div>
+          <label className="block text-sm font-medium mb-2">Upload Design Reference</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            className="w-full p-3 rounded bg-zinc-800 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-emerald-400 file:text-zinc-950 hover:file:bg-emerald-500"
+          />
+          {uploadedFile && (
+            <p className="text-sm text-emerald-400 mt-2">
+              ✓ Selected: {uploadedFile.name}
+            </p>
+          )}
+        </div>
+      )}
+
+      {designType === 'flash' && (
+        <div>
+          <label className="block text-sm font-medium mb-2">Select Flash Design</label>
+          <select
+            required
+            value={selectedFlash}
+            onChange={(e) => setSelectedFlash(e.target.value)}
+            className="w-full p-3 rounded bg-zinc-800"
+          >
+            <option value="">Choose a design...</option>
+            {flashDesigns.map((design) => (
+              <option key={design.title} value={design.title}>
+                {design.title}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Size</label>
+        <select
+          required
+          value={size}
+          onChange={(e) => setSize(e.target.value)}
+          className="w-full p-3 rounded bg-zinc-800"
+        >
+          <option value="">Select size...</option>
+          <option value="small">Small (2-3 inches)</option>
+          <option value="medium">Medium (4-6 inches)</option>
+          <option value="large">Large (7+ inches)</option>
+        </select>
+      </div>
+
       <textarea
         required
         className="p-3 rounded bg-zinc-800"
         rows={5}
-        placeholder="Describe your idea"
+        placeholder={designType === 'own' ? "Describe your design idea" : "Additional details or modifications"}
         value={description}
         onChange={e => setDescription(e.target.value)}
       />
-      <Button type="submit">Send Request</Button>
+      
+      {error && (
+        <p className="text-red-400 text-sm">{error}</p>
+      )}
+      
+      <Button type="submit" disabled={loading}>
+        {loading ? 'Sending...' : 'Send Request'}
+      </Button>
     </form>
   );
 }
