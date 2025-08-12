@@ -56,6 +56,12 @@ app.post('/contact', async (req, res) => {
   }
 });
 
+// Aliases under /api for compatibility with dev proxy settings
+app.post('/api/contact', async (req, res) => {
+  req.url = '/contact';
+  return app._router.handle(req, res);
+});
+
 // In-memory bookings for local testing
 const localBookings = new Set(); // keys: `${date}|${time}`
 
@@ -80,6 +86,16 @@ app.post('/bookings', (req, res) => {
     localBookings.add(key);
     return res.json({ message: 'booked', date, time, booked: true });
   }
+});
+
+app.get('/api/bookings', (req, res) => {
+  req.url = '/bookings';
+  return app._router.handle(req, res);
+});
+
+app.post('/api/bookings', (req, res) => {
+  req.url = '/bookings';
+  return app._router.handle(req, res);
 });
 
 // Health check endpoint

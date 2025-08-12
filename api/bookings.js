@@ -18,21 +18,36 @@ export default async function handler(req, res) {
     'Access-Control-Allow-Headers',
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
+  // Disable caching for dynamic availability
+  res.setHeader('Cache-Control', 'no-store, must-revalidate');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
 
-  // Fallback when Redis is not configured
+  // Strict mode: require Redis to be configured
   if (!redis) {
-    if (req.method === 'GET') {
-      return res.status(200).json({ bookings: [] });
-    }
-    return res.status(200).json({ message: 'No-op without Redis configured' });
+    return res.status(503).json({ message: 'Redis not configured. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.' });
   }
 
   try {
+    // Optional debug: append ?debug=1 to GET to verify connectivity
+    if (req.method === 'GET' && req.url && req.url.includes('debug=1')) {
+      let pingOk = false;
+      try {
+        // some deployments may not support ping; fallback to a harmless op
+        if (typeof redis.ping === 'function') {
+          const pong = await redis.ping();
+          pingOk = String(pong).toLowerCase().includes('pong') || pong === 'PONG';
+        } else {
+          await redis.scard(BOOKINGS_KEY);
+          pingOk = true;
+        }
+      } catch (_) {}
+      return res.status(200).json({ ok: true, redisConfigured: true, pingOk });
+    }
+
     if (req.method === 'GET') {
       // Read all bookings from a Redis set
       const members = await redis.smembers(BOOKINGS_KEY);
@@ -65,7 +80,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method not allowed' });
   } catch (error) {
     console.error('Bookings API error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Internal server error', error: String(error && error.message ? error.message : error) });
   }
 }
 

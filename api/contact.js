@@ -105,6 +105,16 @@ export default async function handler(req, res) {
       return res.status(500).json({ message: 'Failed to send email' });
     }
 
+    // After email success, mark the slot as booked in Redis (if configured)
+    if (redis) {
+      try {
+        const key = `${appointmentDate}|${appointmentTime}`;
+        await redis.sadd('bookings', key);
+      } catch (e) {
+        console.error('Failed to persist booking in Redis:', e);
+      }
+    }
+
     return res.status(200).json({ message: 'Booking request sent successfully', data });
   } catch (error) {
     console.error('API error:', error);

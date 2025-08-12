@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+const API_BASE = import.meta.env.VITE_API_BASE || '';
 
 const healedTattoos = [
   { 
@@ -985,7 +986,7 @@ function BookingSection({ prefillDescription, bookedTimes, onToggleBooked }) {
         });
       }
 
-      const response = await fetch('/api/contact', {
+      const response = await fetch(`${API_BASE}/api/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1336,25 +1337,20 @@ export default function TattooPortfolio() {
   const [prefillDescription, setPrefillDescription] = useState('');
   const [bookedTimes, setBookedTimes] = useState([]);
 
-  // Load bookings from API (fallback to demo if API unavailable)
+  // Load bookings from API (require server data)
   useEffect(() => {
     let canceled = false;
     (async () => {
       try {
-        const res = await fetch('/api/bookings');
+        const res = await fetch(`${API_BASE}/api/bookings`);
         if (!res.ok) throw new Error('Failed to load bookings');
         const json = await res.json();
         if (!canceled && Array.isArray(json.bookings)) {
           setBookedTimes(json.bookings);
         }
-      } catch (_) {
-        if (!canceled) {
-          setBookedTimes([
-            { date: '2024-12-20', time: '14:00' },
-            { date: '2024-12-21', time: '10:00' },
-            { date: '2024-12-23', time: '16:00' }
-          ]);
-        }
+      } catch (e) {
+        console.error('Failed to load bookings from server:', e);
+        if (!canceled) setBookedTimes([]);
       }
     })();
     return () => { canceled = true; };
@@ -1364,14 +1360,14 @@ export default function TattooPortfolio() {
   useEffect(() => {
     const intervalId = setInterval(async () => {
       try {
-        const res = await fetch('/api/bookings');
+        const res = await fetch(`${API_BASE}/api/bookings`, { cache: 'no-store' });
         if (!res.ok) return;
         const json = await res.json();
         if (Array.isArray(json.bookings)) {
           setBookedTimes(json.bookings);
         }
       } catch (_) {}
-    }, 20000); // every 20s
+    }, 5000); // every 5s
     return () => clearInterval(intervalId);
   }, []);
 
@@ -1399,11 +1395,19 @@ export default function TattooPortfolio() {
     });
 
     try {
-      await fetch('/api/bookings', {
+      await fetch(`${API_BASE}/api/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date, time })
       });
+      // Immediate refresh after a successful toggle to propagate to all views
+      try {
+        const res = await fetch(`${API_BASE}/api/bookings`, { cache: 'no-store' });
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json.bookings)) setBookedTimes(json.bookings);
+        }
+      } catch (_) {}
     } catch (e) {
       // Rollback on error
       setBookedTimes((prev) => {
