@@ -571,6 +571,9 @@ function AppointmentCalendar({ onDateSelect, selectedDate, selectedTime, bookedT
   const [availableDates, setAvailableDates] = useState(new Set());
   const [availableTimes, setAvailableTimes] = useState([]);
   const [isAdminMode, setIsAdminMode] = useState(false);
+  const [showAdminPrompt, setShowAdminPrompt] = useState(false);
+  const [adminInput, setAdminInput] = useState('');
+  const [adminError, setAdminError] = useState('');
 
   // Generate available dates for the next 3 months
   useEffect(() => {
@@ -598,29 +601,30 @@ function AppointmentCalendar({ onDateSelect, selectedDate, selectedTime, bookedT
     setAvailableTimes(times);
   }, []);
 
-  // Admin mode toggle: requires password only when enabling; disabling never asks
+  // Admin mode toggle: show inline prompt when enabling; disabling never asks
   const toggleAdminMode = () => {
     if (isAdminMode) {
       const newAdminMode = false;
       setIsAdminMode(newAdminMode);
       localStorage.setItem('adminMode', String(newAdminMode));
       console.log('🔐 Admin mode deactivated');
-      return;
+    } else {
+      setAdminInput('');
+      setAdminError('');
+      setShowAdminPrompt(true);
     }
+  };
 
-    try {
-      const password = prompt('Enter admin password');
-      if (password === ADMIN_PASSWORD) {
-        const newAdminMode = true;
-        setIsAdminMode(newAdminMode);
-        localStorage.setItem('adminMode', String(newAdminMode));
-        console.log('🔐 Admin mode activated');
-      }
-    } catch (error) {
-      const newAdminMode = true;
-      setIsAdminMode(newAdminMode);
-      localStorage.setItem('adminMode', String(newAdminMode));
-      console.log('🔐 Admin mode activated (fallback)');
+  const confirmAdminPassword = () => {
+    if (adminInput === ADMIN_PASSWORD) {
+      setIsAdminMode(true);
+      localStorage.setItem('adminMode', 'true');
+      setShowAdminPrompt(false);
+      setAdminInput('');
+      setAdminError('');
+      console.log('🔐 Admin mode activated');
+    } else {
+      setAdminError('Incorrect password');
     }
   };
 
@@ -768,6 +772,25 @@ function AppointmentCalendar({ onDateSelect, selectedDate, selectedTime, bookedT
           {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
         </h4>
       </div>
+
+      {showAdminPrompt && (
+        <div className="mb-4 p-4 rounded border border-emerald-500/30 bg-emerald-500/10">
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+            <input
+              type="password"
+              value={adminInput}
+              onChange={(e) => setAdminInput(e.target.value)}
+              placeholder="Enter admin password"
+              className="flex-1 p-2 rounded bg-zinc-900 border border-zinc-800 focus:border-emerald-500"
+            />
+            <div className="flex gap-2">
+              <Button onClick={confirmAdminPassword}>Confirm</Button>
+              <Button variant="outline" onClick={() => { setShowAdminPrompt(false); setAdminInput(''); setAdminError(''); }}>Cancel</Button>
+            </div>
+          </div>
+          {adminError && <div className="text-red-400 text-sm mt-2">{adminError}</div>}
+        </div>
+      )}
 
       {/* Calendar Grid */}
       <div className="grid grid-cols-7 gap-1 mb-6">
