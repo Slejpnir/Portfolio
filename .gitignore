@@ -14,3 +14,4 @@ node_modules/
 # Uncomment the next line if you want to ignore lockfiles (not recommended for teams)
 # package-lock.json
 # yarn.lock 
+env.example

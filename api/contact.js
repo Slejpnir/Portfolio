@@ -3,70 +3,98 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export default async function handler(req, res) {
+  // Enable CORS for Vercel
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,DELETE,PATCH,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
-    const { name, email, phone, designType, selectedFlash, size, description, uploadedFile } = req.body;
+    const { name, email, phone, designType, selectedFlash, size, description, appointmentDate, appointmentTime, uploadedFile } = req.body;
 
     // Validate required fields
     if (!name || !size || !description) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      return res.status(400).json({ message: 'Name, size, and description are required' });
     }
 
-    // Validate that at least one contact method is provided
+    // Validate that at least email or phone is provided
     if (!email && !phone) {
       return res.status(400).json({ message: 'Please provide either an email or phone number' });
     }
 
-    // Create email content
-    const emailContent = `
+    // Validate appointment details
+    if (!appointmentDate || !appointmentTime) {
+      return res.status(400).json({ message: 'Appointment date and time are required' });
+    }
+
+    // Prepare email content
+    let emailContent = `
       <h2>New Tattoo Booking Request</h2>
       <p><strong>Name:</strong> ${name}</p>
-      ${email ? `<p><strong>Email:</strong> ${email}</p>` : ''}
-      ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ''}
-      <p><strong>Design Type:</strong> ${designType}</p>
-      ${designType === 'flash' ? `<p><strong>Selected Flash Design:</strong> ${selectedFlash}</p>` : ''}
       <p><strong>Size:</strong> ${size}</p>
       <p><strong>Description:</strong> ${description}</p>
-      ${uploadedFile ? `<p><strong>Reference Image:</strong> Attached as file: ${uploadedFile.name}</p>` : ''}
+      <p><strong>Appointment Date:</strong> ${appointmentDate}</p>
+      <p><strong>Appointment Time:</strong> ${appointmentTime}</p>
+      <p><strong>Design Type:</strong> ${designType}</p>
     `;
 
-    // Prepare email options
-    const emailOptions = {
-      from: 'Tattoo Portfolio <onboarding@resend.dev>',
-      to: [process.env.ADMIN_EMAIL],
-      subject: `New Tattoo Booking: ${name}`,
+    // Add contact information
+    if (email) {
+      emailContent += `<p><strong>Email:</strong> ${email}</p>`;
+    }
+    if (phone) {
+      emailContent += `<p><strong>Phone:</strong> ${phone}</p>`;
+    }
+
+    // Add flash design selection if applicable
+    if (designType === 'flash' && selectedFlash) {
+      emailContent += `<p><strong>Selected Flash Design:</strong> ${selectedFlash}</p>`;
+    }
+
+    // Prepare email data
+    const emailData = {
+      from: process.env.ADMIN_EMAIL || 'noreply@yourdomain.com',
+      to: process.env.ADMIN_EMAIL || 'admin@yourdomain.com',
+      subject: `New Tattoo Booking: ${name} - ${appointmentDate} at ${appointmentTime}`,
       html: emailContent,
     };
 
-    // Add attachment if file is uploaded
+    // Add attachment if file was uploaded
     if (uploadedFile && uploadedFile.data) {
-      // Convert base64 to buffer for attachment
+      // Convert base64 to buffer
       const base64Data = uploadedFile.data.replace(/^data:image\/[a-z]+;base64,/, '');
       const buffer = Buffer.from(base64Data, 'base64');
       
-      emailOptions.attachments = [
-        {
-          filename: uploadedFile.name,
-          content: buffer,
-          contentType: uploadedFile.type
-        }
-      ];
+      emailData.attachments = [{
+        filename: uploadedFile.name,
+        content: buffer,
+        contentType: uploadedFile.type
+      }];
     }
 
     // Send email
-    const { data, error } = await resend.emails.send(emailOptions);
+    const { data, error } = await resend.emails.send(emailData);
 
     if (error) {
       console.error('Resend error:', error);
       return res.status(500).json({ message: 'Failed to send email' });
     }
 
-    return res.status(200).json({ message: 'Email sent successfully' });
+    return res.status(200).json({ message: 'Booking request sent successfully', data });
   } catch (error) {
-    console.error('Server error:', error);
+    console.error('API error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 } 
