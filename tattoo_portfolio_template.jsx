@@ -864,11 +864,6 @@ function AppointmentCalendar({ onDateSelect, selectedDate, selectedTime, bookedT
             🔒 <strong>ADMIN MODE ACTIVE</strong> 🔒
             <br />
             <span className="text-xs">Click time slots to mark as booked/unbooked</span>
-            <br />
-            <div className="mt-2 text-xs text-red-300">
-              📊 Current bookings: {bookedTimes.length} | 
-              💾 Admin mode saved to localStorage
-            </div>
           </div>
         )}
       </div>
@@ -1259,9 +1254,20 @@ function BookingSection({ prefillDescription, bookedTimes, onToggleBooked }) {
                 </div>
               )}
               
+              {selectedDate && selectedTime && bookedTimes.some(b => b.date === selectedDate && b.time === selectedTime) && (
+                <div className="p-3 mb-3 rounded bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                  This slot is currently marked as booked. Please choose another time.
+                </div>
+              )}
               <Button 
                 type="submit" 
-                disabled={loading || Object.keys(errors).length > 0 || !selectedDate || !selectedTime}
+                disabled={
+                  loading ||
+                  Object.keys(errors).length > 0 ||
+                  !selectedDate ||
+                  !selectedTime ||
+                  bookedTimes.some(b => b.date === selectedDate && b.time === selectedTime)
+                }
                 className="w-full text-lg py-4"
               >
                 {loading ? (
@@ -1352,6 +1358,21 @@ export default function TattooPortfolio() {
       }
     })();
     return () => { canceled = true; };
+  }, []);
+
+  // Periodically refresh bookings so all visitors see updates (Redis-backed)
+  useEffect(() => {
+    const intervalId = setInterval(async () => {
+      try {
+        const res = await fetch('/api/bookings');
+        if (!res.ok) return;
+        const json = await res.json();
+        if (Array.isArray(json.bookings)) {
+          setBookedTimes(json.bookings);
+        }
+      } catch (_) {}
+    }, 20000); // every 20s
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleSectionChange = (section) => {

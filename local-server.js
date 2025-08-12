@@ -28,6 +28,12 @@ app.post('/contact', async (req, res) => {
       return res.status(400).json({ message: 'Appointment date and time are required' });
     }
 
+    // For local testing: block if slot is booked in-memory
+    const key = `${appointmentDate}|${appointmentTime}`;
+    if (localBookings.has(key)) {
+      return res.status(409).json({ message: 'Selected time slot is already booked' });
+    }
+
     // For local testing, just return success (no email sending)
     console.log('📧 Local Test - Booking Request Received:');
     console.log('Name:', name);

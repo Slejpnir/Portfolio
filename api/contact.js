@@ -1,6 +1,10 @@
 import { Resend } from 'resend';
+import { Redis } from '@upstash/redis';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  ? new Redis({ url: process.env.UPSTASH_REDIS_REST_URL, token: process.env.UPSTASH_REDIS_REST_TOKEN })
+  : null;
 
 export default async function handler(req, res) {
   // Enable CORS for Vercel
@@ -37,6 +41,15 @@ export default async function handler(req, res) {
     // Validate appointment details
     if (!appointmentDate || !appointmentTime) {
       return res.status(400).json({ message: 'Appointment date and time are required' });
+    }
+
+    // If Redis configured, block already-booked slots
+    if (redis) {
+      const key = `${appointmentDate}|${appointmentTime}`;
+      const isBooked = await redis.sismember('bookings', key);
+      if (isBooked) {
+        return res.status(409).json({ message: 'Selected time slot is already booked' });
+      }
     }
 
     // Prepare email content
