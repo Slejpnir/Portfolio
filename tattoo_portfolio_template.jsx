@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 const API_BASE = import.meta.env.VITE_API_BASE || '';
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
 
 const healedTattoos = [
   { 
@@ -608,8 +609,8 @@ function AppointmentCalendar({ onDateSelect, selectedDate, selectedTime, bookedT
     }
 
     try {
-      const password = prompt('Enter admin password (default: admin123)');
-      if (password === 'admin123') {
+      const password = prompt('Enter admin password');
+      if (password === ADMIN_PASSWORD) {
         const newAdminMode = true;
         setIsAdminMode(newAdminMode);
         localStorage.setItem('adminMode', String(newAdminMode));
